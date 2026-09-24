@@ -8,6 +8,9 @@ import Spinner from "../components/Spinner";
 import TaskCard from "../components/TaskCard";
 import TaskFormModal from "../components/TaskFormModal";
 import CommentsModal from "../components/CommentsModal";
+import ConfirmDialog from "../components/ConfirmDialog";
+import Icon from "../components/Icon";
+import { useToast } from "../context/ToastContext";
 
 const COLUMNS = [
   { status: "TODO", label: "To Do" },
@@ -24,6 +27,7 @@ const NEXT_STATUS = {
 };
 
 export default function Project() {
+  const toast = useToast();
   const { id } = useParams();
   const { user } = useAuth();
   const [project, setProject] = useState(null);
