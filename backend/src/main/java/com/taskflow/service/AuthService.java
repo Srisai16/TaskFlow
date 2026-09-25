@@ -8,6 +8,7 @@ import com.taskflow.entity.Role;
 import com.taskflow.entity.User;
 import com.taskflow.exception.BadRequestException;
 import com.taskflow.repository.UserRepository;
+import com.taskflow.security.JwtAuthFilter.JwtUtil;
 import com.taskflow.security.SecurityUtil;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -15,7 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.lang.reflect.Method;
 
 @Service
 public class AuthService {
@@ -25,11 +25,11 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final Object jwtUtil;
+    private final JwtUtil jwtUtil;
     private final SecurityUtil securityUtil;
 
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
-                       Object jwtUtil, SecurityUtil securityUtil) {
+                       JwtUtil jwtUtil, SecurityUtil securityUtil) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
@@ -73,11 +73,6 @@ public class AuthService {
     }
 
     private String generateToken(User user) {
-        try {
-            Method method = jwtUtil.getClass().getMethod("generateToken", String.class, Long.class, String.class);
-            return (String) method.invoke(jwtUtil, user.getEmail(), user.getId(), user.getRole().name());
-        } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException("Unable to generate JWT", e);
-        }
+        return jwtUtil.generateToken(user.getEmail(), user.getId(), user.getRole().name());
     }
 }

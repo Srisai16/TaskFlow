@@ -1,6 +1,6 @@
-import { useEffect } from "react";
 import Modal from "./Modal";
 import Spinner from "./Spinner";
+import Icon from "./Icon";
 
 export default function ConfirmDialog({
   open,
@@ -12,33 +12,38 @@ export default function ConfirmDialog({
   onCancel,
   onConfirm,
 }) {
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e) => {
-      if (e.key === "Escape" && !busy) onCancel();
-      if (e.key === "Enter" && !busy) onConfirm();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, busy, onCancel, onConfirm]);
-
   if (!open) return null;
 
   return (
-    <Modal title={title} onClose={onCancel}>
+    <Modal
+      title={title}
+      onClose={onCancel}
+      size="small"
+      closeDisabled={busy}
+    >
       <div className="confirm-body">
-        {message && <p className="muted">{message}</p>}
+        <div className={`confirm-icon ${danger ? "danger" : "info"}`}>
+          <Icon name={danger ? "trash" : "info"} size={20} />
+        </div>
+        <p className="confirm-message">{message}</p>
         <div className="form-actions">
-          <button type="button" className="btn ghost" onClick={onCancel} disabled={busy}>
+          <button
+            type="button"
+            className="btn secondary"
+            onClick={onCancel}
+            disabled={busy}
+            data-modal-initial-focus
+          >
             Cancel
           </button>
           <button
             type="button"
-            className={`btn ${danger ? "danger" : "primary"}`}
+            className={`btn ${danger ? "danger-solid" : "primary"}`}
             onClick={onConfirm}
             disabled={busy}
           >
-            {busy ? <Spinner /> : confirmLabel}
+            {busy && <Spinner label="Processing" />}
+            <span>{busy ? "Working..." : confirmLabel}</span>
           </button>
         </div>
       </div>

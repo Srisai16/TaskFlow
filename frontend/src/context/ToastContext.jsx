@@ -1,62 +1,93 @@
-import { createContext, useCallback, useContext, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import ToastContainer from "../components/ToastContainer";
 
 const ToastContext = createContext(null);
-
-let seq = 0;
+let sequence = 0;
 
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
   const timers = useRef(new Map());
+  const remaining = useRef(new Map());
 
   const dismiss = useCallback((id) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
     const timer = timers.current.get(id);
-    if (timer) {
-      clearTimeout(timer);
-      timers.current.delete(id);
-    }
+    if (timer) clearTimeout(timer);
+    timers.current.delete(id);
+    remaining.current.delete(id);
+    setToasts((current) => current.filter((toast) => toast.id !== id));
   }, []);
 
-  const push = useCallback(
-    (message, type = "success", opts = {}) => {
-      const id = ++seq;
-      setToasts((prev) => [...prev, { id, message, type }]);
-      const ttl = opts.ttl || (type === "error" ? 6000 : 3500);
-      const timer = setTimeout(() => dismiss(id), ttl);
+  const startTimer = useCallback(
+    (id, duration) => {
+      const timer = setTimeout(() => dismiss(id), duration);
       timers.current.set(id, timer);
-      return id;
     },
     [dismiss]
   );
 
-  const success = useCallback((m, o) => push(m, "success", o), [push]);
-  const error = useCallback((m, o) => push(m, "error", o), [push]);
-  const info = useCallback((m, o) => push(m, "info", o), [push]);
+  const pause = useCallback((id) => {
+    const timer = timers.current.get(id);
+    if (timer) clearTimeout(timer);
+    timers.current.delete(id);
+  }, []);
+
+  const resume = useCallback(
+    (id) => {
+      if (timers.current.has(id)) return;
+      const expiresAt = remaining.current.get(id) ?? 0;
+      remaining.current.delete(id);
+      const duration = expiresAt - Date.now();
+      if (duration > 0) startTimer(id, duration);
+      else dismiss(id);
+    },
+    [dismiss, startTimer]
+  );
+
+  const push = useCallback(
+    (message, type = "success", options = {}) => {
+      const id = ++sequence;
+      const requestedTtl = Number(options.ttl);
+      const duration = Number.isFinite(requestedTtl)
+        ? requestedTtl
+        : type === "error"
+          ? 6500
+          : type === "warning"
+            ? 5500
+            : 4000;
+      const toast = { id, message, type, pause: () => pause(id), resume: () => resume(id) };
+      setToasts((current) => [...current, toast].slice(-4));
+      remaining.current.set(id, Date.now() + duration);
+      startTimer(id, duration);
+      return id;
+    },
+    [pause, resume, startTimer]
+  );
+
+  const success = useCallback((message, options) => push(message, "success", options), [push]);
+  const error = useCallback((message, options) => push(message, "error", options), [push]);
+  const info = useCallback((message, options) => push(message, "info", options), [push]);
+  const warning = useCallback((message, options) => push(message, "warning", options), [push]);
+
+  useEffect(() => {
+    const timerMap = timers.current;
+    const timeMap = remaining.current;
+    return () => {
+      timerMap.forEach((timer) => clearTimeout(timer));
+      timerMap.clear();
+      timeMap.clear();
+    };
+  }, []);
 
   return (
-    <ToastContext.Provider value={{ success, error, info, dismiss }}>
+    <ToastContext.Provider value={{ success, error, info, warning, dismiss }}>
       {children}
-      <div className="toast-stack" aria-live="polite">
-        {toasts.map((t) => (
-          <div key={t.id} className={`toast ${t.type}`} role="status">
-            {t.message}
-            <button
-              type="button"
-              className="toast-close"
-              onClick={() => dismiss(t.id)}
-              aria-label="Dismiss"
-            >
-              &times;
-            </button>
-          </div>
-        ))}
-      </div>
+      <ToastContainer toasts={toasts} onDismiss={dismiss} />
     </ToastContext.Provider>
   );
 }
 
 export function useToast() {
-  const ctx = useContext(ToastContext);
-  if (!ctx) throw new Error("useToast must be used inside ToastProvider");
-  return ctx;
+  const context = useContext(ToastContext);
+  if (!context) throw new Error("useToast must be used inside ToastProvider");
+  return context;
 }

@@ -1,57 +1,62 @@
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
 
-/**
- * Owns the notification list + unread count and keeps them in sync over a
- * native WebSocket (Spring TextWebSocketHandler at /ws/notifications). Falls
- * back gracefully to polling the REST endpoint if the socket is unavailable.
- */
 export function useNotifications() {
   const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [unread, setUnread] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const refresh = useCallback(async () => {
+    setLoading(true);
+    setError("");
     try {
-      const [listRes, countRes] = await Promise.all([
+      const [listResponse, countResponse] = await Promise.all([
         api.get("/notifications"),
         api.get("/notifications/unread-count"),
       ]);
-      setItems(listRes.data);
-      setUnread(countRes.data);
+      setItems(listResponse.data);
+      setUnread(countResponse.data);
     } catch {
-      // ignore
+      setError("Notifications are temporarily unavailable.");
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (!user) return;
-    refresh();
+    if (!user) {
+      setItems([]);
+      setUnread(0);
+      setLoading(false);
+      return undefined;
+    }
 
+    refresh();
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    let ws;
+    let socket;
     let retryTimer;
     let closedByUs = false;
 
     const connect = () => {
-      ws = new WebSocket(
-        `${protocol}://${window.location.host}/ws/notifications`
-      );
-      ws.onopen = () =>
-        ws.send(JSON.stringify({ type: "SUBSCRIBE", userId: user.id }));
-      ws.onmessage = (event) => {
+      socket = new WebSocket(`${protocol}://${window.location.host}/ws/notifications`);
+      socket.onopen = () => {
+        socket.send(JSON.stringify({ type: "SUBSCRIBE", userId: user.id }));
+      };
+      socket.onmessage = (event) => {
         try {
-          const msg = JSON.parse(event.data);
-          if (msg && msg.type === "NOTIFICATION" && msg.data) {
-            setItems((prev) => [msg.data, ...prev].slice(0, 50));
-            setUnread((u) => u + 1);
+          const message = JSON.parse(event.data);
+          if (message?.type === "NOTIFICATION" && message.data) {
+            setItems((current) => [message.data, ...current].slice(0, 50));
+            setUnread((current) => current + 1);
           }
         } catch {
-          // ignore malformed frames
+          setError("A live update could not be read.");
         }
       };
-      ws.onclose = () => {
+      socket.onclose = () => {
         if (!closedByUs) retryTimer = setTimeout(connect, 5000);
       };
     };
@@ -59,34 +64,38 @@ export function useNotifications() {
     connect();
     return () => {
       closedByUs = true;
-      if (ws) ws.close();
+      socket?.close();
       if (retryTimer) clearTimeout(retryTimer);
     };
-  }, [user, refresh]);
+  }, [refresh, user]);
 
   const markRead = async (id) => {
+    setError("");
     try {
       await api.post(`/notifications/${id}/read`);
-      setItems((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
-      );
-      setUnread((u) => Math.max(0, u - 1));
+      setItems((current) => current.map((item) => (item.id === id ? { ...item, isRead: true } : item)));
+      setUnread((current) => Math.max(0, current - 1));
+      return true;
     } catch {
-      // ignore
+      setError("Could not update that notification.");
+      return false;
     }
   };
 
   const markAllRead = async () => {
+    const unreadItems = items.filter((item) => !item.isRead);
+    if (!unreadItems.length) return;
+    setError("");
     try {
-      await Promise.all(
-        items.filter((n) => !n.isRead).map((n) => api.post(`/notifications/${n.id}/read`))
-      );
-      setItems((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      await Promise.all(unreadItems.map((item) => api.post(`/notifications/${item.id}/read`)));
+      setItems((current) => current.map((item) => ({ ...item, isRead: true })));
       setUnread(0);
+      return true;
     } catch {
-      // ignore
+      setError("Could not mark notifications as read.");
+      return false;
     }
   };
 
-  return { items, unread, markRead, markAllRead };
+  return { items, unread, loading, error, refresh, markRead, markAllRead };
 }

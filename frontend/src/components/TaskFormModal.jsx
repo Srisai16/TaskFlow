@@ -1,9 +1,7 @@
 import { useState } from "react";
 import Modal from "./Modal";
 import Spinner from "./Spinner";
-
-const STATUSES = ["TODO", "IN_PROGRESS", "IN_REVIEW", "DONE"];
-const PRIORITIES = ["LOW", "MEDIUM", "HIGH", "URGENT"];
+import { PRIORITIES, STATUSES } from "../utils/format";
 
 export default function TaskFormModal({
   task,
@@ -12,6 +10,7 @@ export default function TaskFormModal({
   onSubmit,
   onClose,
   submitting,
+  error = "",
   children,
 }) {
   const editing = Boolean(task);
@@ -23,16 +22,15 @@ export default function TaskFormModal({
     dueDate: task?.dueDate || "",
     assigneeId: task?.assigneeId || "",
   });
+  const busy = Boolean(submitting);
+  const set = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
 
-  const set = (key) => (e) =>
-    setForm((f) => ({ ...f, [key]: e.target.value }));
-
-  const submit = (e) => {
-    e.preventDefault();
+  const submit = (event) => {
+    event.preventDefault();
     if (!form.title.trim()) return;
     onSubmit({
       title: form.title.trim(),
-      description: form.description || null,
+      description: form.description.trim() || null,
       status: form.status,
       priority: form.priority,
       dueDate: form.dueDate || null,
@@ -41,78 +39,76 @@ export default function TaskFormModal({
   };
 
   return (
-    <Modal title={editing ? "Edit Task" : "New Task"} onClose={onClose}>
+    <Modal
+      title={editing ? "Edit task" : "Create a new task"}
+      description={editing ? "Update ownership, priority, and delivery details." : "Add a clear, actionable step to the board."}
+      onClose={onClose}
+      closeDisabled={busy}
+    >
       <form className="form" onSubmit={submit}>
-        <label>
-          Title <span className="req">*</span>
+        <div className="form-field">
+          <div className="field-label-row"><label htmlFor="task-title">Task title</label><span>{form.title.length}/150</span></div>
           <input
+            id="task-title"
             value={form.title}
             onChange={set("title")}
             placeholder="What needs to be done?"
             maxLength={150}
-            autoFocus
+            required
+            data-modal-initial-focus
           />
-        </label>
+        </div>
 
-        <label>
-          Description
+        <div className="form-field">
+          <div className="field-label-row"><label htmlFor="task-description">Description</label><span>Optional</span></div>
           <textarea
+            id="task-description"
             value={form.description}
             onChange={set("description")}
-            rows={3}
-            placeholder="Optional details"
+            placeholder="Add context, acceptance criteria, or useful links"
+            rows={4}
+            maxLength={2000}
           />
-        </label>
-
-        <div className="form-row">
-          <label>
-            Status
-            <select value={form.status} onChange={set("status")}>
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s.replace("_", " ")}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Priority
-            <select value={form.priority} onChange={set("priority")}>
-              {PRIORITIES.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
-          </label>
+          <span className="field-hint align-right">{form.description.length}/2000</span>
         </div>
 
-        <div className="form-row">
-          <label>
-            Due date
-            <input type="date" value={form.dueDate} onChange={set("dueDate")} />
-          </label>
-          <label>
-            Assignee
-            <select value={form.assigneeId} onChange={set("assigneeId")}>
+        <div className="form-grid">
+          <div className="form-field">
+            <label htmlFor="task-status">Status</label>
+            <select id="task-status" value={form.status} onChange={set("status")}>
+              {STATUSES.map((status) => <option key={status.value} value={status.value}>{status.label}</option>)}
+            </select>
+          </div>
+          <div className="form-field">
+            <label htmlFor="task-priority">Priority</label>
+            <select id="task-priority" value={form.priority} onChange={set("priority")}>
+              {PRIORITIES.map((priority) => <option key={priority.value} value={priority.value}>{priority.label}</option>)}
+            </select>
+          </div>
+          <div className="form-field">
+            <label htmlFor="task-due-date">Due date</label>
+            <input id="task-due-date" type="date" value={form.dueDate} onChange={set("dueDate")} />
+          </div>
+          <div className="form-field">
+            <label htmlFor="task-assignee">Assignee</label>
+            <select id="task-assignee" value={form.assigneeId} onChange={set("assigneeId")}>
               <option value="">Unassigned</option>
-              {members.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
+              {members.map((member) => <option key={member.id} value={member.id}>{member.name}</option>)}
             </select>
-          </label>
+          </div>
         </div>
 
-        <div className="form-actions">
-          {children}
-          <button type="button" className="btn ghost" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="submit" className="btn primary" disabled={submitting || !form.title.trim()}>
-            {submitting ? <Spinner /> : editing ? "Save changes" : "Create task"}
-          </button>
+        {error && <div className="alert error" role="alert"><span className="alert-icon">!</span><span>{error}</span></div>}
+
+        <div className={`form-actions ${children ? "with-danger" : ""}`}>
+          {children && <div className="form-danger-action">{children}</div>}
+          <div className="form-action-group">
+            <button type="button" className="btn secondary" onClick={onClose} disabled={busy}>Cancel</button>
+            <button type="submit" className="btn primary" disabled={busy || !form.title.trim()}>
+              {busy && <Spinner label={editing ? "Saving task" : "Creating task"} />}
+              <span>{busy ? (editing ? "Saving..." : "Creating...") : editing ? "Save changes" : "Create task"}</span>
+            </button>
+          </div>
         </div>
       </form>
     </Modal>
