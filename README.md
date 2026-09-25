@@ -124,7 +124,7 @@ GET   /api/projects/{id}/dashboard         stats
 GET   /api/notifications ...               notifications (WebSocket push at /ws/notifications)
 ```
 
-## Interview talking points (use these to stand out)
+## Key Features
 
 - **Layered architecture & SOLID** — controller → service → repository, DTOs as Java `record`s,
   constructor injection, focused single-responsibility services.
