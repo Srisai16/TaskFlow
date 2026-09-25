@@ -2,6 +2,20 @@ import { useCallback, useEffect, useState } from "react";
 import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
 
+function getWebSocketUrl() {
+  const configuredUrl = import.meta.env.VITE_WS_BASE_URL?.trim();
+  const apiUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+  const baseUrl = configuredUrl || (apiUrl && /^https?:\/\//i.test(apiUrl) ? apiUrl.replace(/\/api\/?$/, "") : "");
+  if (!baseUrl) {
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    return `${protocol}://${window.location.host}/ws/notifications`;
+  }
+  const normalizedUrl = baseUrl.replace(/\/+$/, "");
+  if (normalizedUrl.endsWith("/ws/notifications")) return normalizedUrl;
+  const protocol = normalizedUrl.startsWith("https://") ? "wss://" : normalizedUrl.startsWith("http://") ? "ws://" : "";
+  return `${protocol}${normalizedUrl}/ws/notifications`;
+}
+
 export function useNotifications() {
   const { user } = useAuth();
   const [items, setItems] = useState([]);
@@ -35,13 +49,12 @@ export function useNotifications() {
     }
 
     refresh();
-    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
     let socket;
     let retryTimer;
     let closedByUs = false;
 
     const connect = () => {
-      socket = new WebSocket(`${protocol}://${window.location.host}/ws/notifications`);
+      socket = new WebSocket(getWebSocketUrl());
       socket.onopen = () => {
         socket.send(JSON.stringify({ type: "SUBSCRIBE", userId: user.id }));
       };
