@@ -101,6 +101,6 @@ class DashboardServiceTest {
         DashboardDtos.DashboardStats stats = service.getStats(10L);
 
         assertThat(stats.tasksByPriority())
-                .containsExactlyEntriesOf(Map.of("URGENT", 2L, "LOW", 1L));
+                .containsExactlyInAnyOrderEntriesOf(Map.of("URGENT", 2L, "LOW", 1L));
     }
 }
