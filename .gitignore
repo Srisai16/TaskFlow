@@ -26,3 +26,7 @@ frontend/.vite/
 
 # --- docs scratch (not part of source) ---
 CHAT_CONTEXT.md
+# patch scratch (never commit)
+_patch*
+_*.cjs
+_*.cjs.map
