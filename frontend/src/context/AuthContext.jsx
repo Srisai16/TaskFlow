@@ -36,8 +36,15 @@ export function AuthProvider({ children }) {
     setUser(null);
   }
 
+  function updateUser(updates) {
+    const updatedUser = { ...user, ...updates };
+    localStorage.setItem("tf_user", JSON.stringify(updatedUser));
+    setUser(updatedUser);
+    return updatedUser;
+  }
+
   return (
-    <AuthContext.Provider value={{ user, login, register, logout }}>
+    <AuthContext.Provider value={{ user, login, register, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -6,6 +6,8 @@ import { useNotifications } from "../hooks/useNotifications";
 import { initials, projectAccent, timeAgo } from "../utils/format";
 import Avatar from "./Avatar";
 import Icon from "./Icon";
+import Modal from "./Modal";
+import { useToast } from "../context/ToastContext";
 
 function roleLabel(role) {
   if (!role) return "Member";
@@ -13,7 +15,8 @@ function roleLabel(role) {
 }
 
 export default function Navbar({ children }) {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
+  const toast = useToast();
   const { items, unread, loading, error, refresh, markRead, markAllRead } = useNotifications();
   const navigate = useNavigate();
   const location = useLocation();
@@ -33,6 +36,9 @@ export default function Navbar({ children }) {
   const [commandIndex, setCommandIndex] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
 
   const loadProjects = useCallback(async () => {
     if (!user) {
@@ -198,6 +204,27 @@ export default function Navbar({ children }) {
     navigate("/login", { replace: true });
   };
 
+  const openEditProfile = () => {
+    setEditName(user.name || "");
+    setEditEmail(user.email || "");
+    setEditProfileOpen(true);
+    setProfileOpen(false);
+    setSidebarOpen(false);
+  };
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    try {
+      if (editName.trim() && editEmail.trim()) {
+        updateUser({ name: editName.trim(), email: editEmail.trim() });
+        toast.success("Profile updated successfully!");
+        setEditProfileOpen(false);
+      }
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
+  };
+
   if (!user) return null;
 
   return (
@@ -271,11 +298,11 @@ export default function Navbar({ children }) {
 
         <div className="sidebar-bottom">
           <div className="sidebar-tip"><span><Icon name="sparkles" size={15} /></span><div><strong>Keep momentum</strong><p>Use Quick find to jump anywhere.</p></div></div>
-          <div className="sidebar-user">
+          <button type="button" className="sidebar-user" onClick={openEditProfile} aria-label="Edit Profile" style={{ textAlign: "left", width: "100%", background: "transparent", border: "none", cursor: "pointer" }}>
             <Avatar name={user.name} color={user.avatarColor} size={34} decorative />
             <div><strong>{user.name}</strong><span>{roleLabel(user.role)}</span></div>
-            <Icon name="more" size={16} />
-          </div>
+            <Icon name="settings" size={16} />
+          </button>
         </div>
       </aside>
 
@@ -401,6 +428,7 @@ export default function Navbar({ children }) {
                     <div><strong>{user.name}</strong><span>{user.email}</span></div>
                   </div>
                   <div className="profile-role"><Icon name="shield" size={14} /> {roleLabel(user.role)} workspace</div>
+                  <button type="button" role="menuitem" className="profile-menu-item" onClick={openEditProfile}><Icon name="edit" size={17} />Edit Profile</button>
                   <button type="button" role="menuitem" className="profile-menu-item danger" onClick={handleLogout}><Icon name="logout" size={17} />Sign out</button>
                 </div>
               )}
@@ -438,6 +466,25 @@ export default function Navbar({ children }) {
             <div className="command-footer"><span><kbd>↑</kbd><kbd>↓</kbd> to navigate</span><span><kbd>Esc</kbd> to close</span></div>
           </div>
         </div>
+      )}
+
+      {editProfileOpen && (
+        <Modal title="Edit Your Profile" description="Update your personal details and contact information." onClose={() => setEditProfileOpen(false)}>
+          <form onSubmit={handleSaveProfile}>
+            <div className="form-field" style={{ marginBottom: "16px" }}>
+              <label>Full Name</label>
+              <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} required placeholder="Your full name" />
+            </div>
+            <div className="form-field" style={{ marginBottom: "24px" }}>
+              <label>Email Address</label>
+              <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} required placeholder="Your email address" />
+            </div>
+            <div className="form-actions">
+              <button type="button" className="btn secondary" onClick={() => setEditProfileOpen(false)}>Cancel</button>
+              <button type="submit" className="btn primary">Save Changes</button>
+            </div>
+          </form>
+        </Modal>
       )}
     </>
   );

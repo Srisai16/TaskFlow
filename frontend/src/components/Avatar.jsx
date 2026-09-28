@@ -17,6 +17,14 @@ export default function Avatar({ name, color, size = 36, className = "", decorat
         width: size,
         height: size,
         fontSize: Math.max(10, size * 0.36),
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        lineHeight: 1,
+        borderRadius: "50%",
+        color: "white",
+        fontWeight: 500,
+        flexShrink: 0
       }}
       title={label}
       role={decorative ? undefined : "img"}
