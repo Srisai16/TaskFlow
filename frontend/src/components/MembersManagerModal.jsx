@@ -279,7 +279,7 @@ export default function MembersManagerModal({
 
                   <div className="jira-member-info-col">
                     <div className="jira-member-title-line">
-                      <strong>{member.name}</strong>
+                      <strong>{details.name || member.name}</strong>
                       {isMe && <span className="jira-you-badge">You</span>}
                       <span className="jira-dept-chip">{details.department || "Engineering"}</span>
                       <span className="jira-role-pill">{roleObj.label}</span>
@@ -289,7 +289,7 @@ export default function MembersManagerModal({
                       <span className="jira-job-title">
                         {details.title || (member.role === "ADMIN" ? "Project Lead" : "Software Engineer")}
                       </span>
-                      <span className="jira-email">{member.email}</span>
+                      <span className="jira-email">{details.email || member.email}</span>
                     </div>
 
                     {details.skills && details.skills.length > 0 && (
@@ -526,7 +526,8 @@ export default function MembersManagerModal({
  * Dedicated Sub-Modal for Editing Full Member Details
  */
 function EditMemberDetailsModal({ memberData, onClose, onSaved }) {
-  const [name, setName] = useState(memberData.member?.name || "");
+  const [name, setName] = useState(memberData.name || memberData.member?.name || "");
+  const [email, setEmail] = useState(memberData.email || memberData.member?.email || "");
   const [title, setTitle] = useState(memberData.title || "Full Stack Engineer");
   const [department, setDepartment] = useState(memberData.department || "Engineering");
   const [workRole, setWorkRole] = useState(memberData.workRole || "DEVELOPER");
@@ -543,6 +544,8 @@ function EditMemberDetailsModal({ memberData, onClose, onSaved }) {
       .filter(Boolean);
 
     const updated = saveStoredMemberDetails(memberData.member.id, {
+      name: name.trim(),
+      email: email.trim(),
       title: title.trim(),
       department,
       workRole,
@@ -564,13 +567,27 @@ function EditMemberDetailsModal({ memberData, onClose, onSaved }) {
       <form className="jira-edit-member-form" onSubmit={handleSubmit}>
         <div className="jira-edit-profile-header">
           <Avatar name={name} size={48} decorative />
-          <div>
-            <strong>{name}</strong>
-            <span>{memberData.member?.email}</span>
+          <div className="jira-edit-profile-inputs" style={{ display: "flex", flexDirection: "column", gap: "8px", flex: 1, marginLeft: "16px" }}>
+            <input 
+              type="text" 
+              value={name} 
+              onChange={(e) => setName(e.target.value)} 
+              placeholder="Full Name"
+              required 
+              style={{ fontSize: "16px", fontWeight: "600", padding: "6px 12px", borderRadius: "6px", border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-primary)" }}
+            />
+            <input 
+              type="email" 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)} 
+              placeholder="Email Address"
+              required 
+              style={{ fontSize: "14px", padding: "6px 12px", borderRadius: "6px", border: "1px solid var(--border-color)", background: "var(--bg-secondary)", color: "var(--text-secondary)" }}
+            />
           </div>
         </div>
 
-        <div className="jira-form-row-2">
+        <div className="jira-form-row-2" style={{ marginTop: "24px" }}>
           <div className="form-field">
             <label>Job Title / Designation</label>
             <input
