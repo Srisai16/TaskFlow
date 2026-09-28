@@ -30,8 +30,11 @@ function ApplicationLayout() {
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main-content">Skip to main content</a>
-      <Navbar />
-      <div className="workspace-content"><Outlet /></div>
+      <Navbar>
+        <div className="workspace-content">
+          <Outlet />
+        </div>
+      </Navbar>
     </div>
   );
 }

@@ -95,9 +95,10 @@ body {
 }
 
 #root {
-  display: flex;
   min-height: 100vh;
   width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 a {
@@ -142,7 +143,6 @@ kbd {
 }
 
 /* ==========================================================================
-/* ==========================================================================
    LAYOUT STRUCTURE
    ========================================================================== */
 
@@ -162,10 +162,19 @@ kbd {
   top: 0;
 }
 
-.app, .app-shell {
+.app {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.app-shell {
   display: flex;
   min-height: 100vh;
   width: 100%;
+  background: var(--bg-app);
 }
 
 .workspace-sidebar {
@@ -183,14 +192,21 @@ kbd {
   transition: transform var(--transition-normal);
 }
 
-.workspace-content,
-.main-viewport {
+.workspace-main {
   flex: 1;
   margin-left: var(--sidebar-width);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   width: calc(100% - var(--sidebar-width));
+  background: var(--bg-app);
+}
+
+.workspace-content {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 @media (max-width: 900px) {
@@ -200,8 +216,7 @@ kbd {
   .workspace-sidebar.is-open {
     transform: translateX(0);
   }
-  .workspace-content,
-  .main-viewport {
+  .workspace-main {
     margin-left: 0;
     width: 100%;
   }

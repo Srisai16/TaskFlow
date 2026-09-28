@@ -12,7 +12,7 @@ function roleLabel(role) {
   return role.charAt(0) + role.slice(1).toLowerCase();
 }
 
-export default function Navbar() {
+export default function Navbar({ children }) {
   const { user, logout } = useAuth();
   const { items, unread, loading, error, refresh, markRead, markAllRead } = useNotifications();
   const navigate = useNavigate();
@@ -281,7 +281,8 @@ export default function Navbar() {
 
       {sidebarOpen && <button type="button" className="sidebar-scrim" onClick={closeSidebar} aria-label="Close navigation overlay" />}
 
-      <header className="navbar">
+      <div className="workspace-main">
+        <header className="navbar">
         <div className="navbar-inner">
           <div className="navbar-leading">
             <button type="button" className="icon-btn mobile-menu" onClick={() => setSidebarOpen(true)} aria-label="Open navigation"><Icon name="menu" size={20} /></button>
@@ -407,6 +408,8 @@ export default function Navbar() {
           </div>
         </div>
       </header>
+      {children}
+    </div>
 
       {searchOpen && (
         <div className="command-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) closeSearch(); }}>
